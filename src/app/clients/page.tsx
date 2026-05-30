@@ -11,27 +11,38 @@ type Client = {
   port?: number;
   phone?: string;
   sim?: string;
+  born?: string;
+  days?: number;
+  notes?: string;
 };
 
 const clients: Client[] = [
-  { customer: "Ed", agent: "Ed", model: "old proxy", status: "down", port: 2220, phone: "+52 444 575 3406", sim: "119319" },
-  { customer: "Navi", agent: "Navi", model: "old proxy", status: "ok", port: 2221, phone: "+52 444 289 3990" },
-  { customer: "Doc", agent: "Doc", model: "old proxy", status: "ok", port: 2222, phone: "+52 444 315 7963" },
-  { customer: "Borz", agent: "Borz", model: "old proxy", status: "ok", port: 2223, phone: "+52 444 315 7963" },
-  { customer: "Thor", agent: "Thor", model: "Gemini 3.1/OldProxy", status: "ok", port: 2224, phone: "+52 444 431 0958", sim: "31707" },
-  { customer: "Cherry", agent: "Cherry", model: "unknown", status: "down", port: 2226 },
-  { customer: "Vera", agent: "Vera", model: "unknown", status: "down", port: 2227 },
-  { customer: "Lili", agent: "Lili", model: "to check", status: "ok", port: 2228, phone: "+52 485 104 4333", sim: "82665" },
-  { customer: "Niko", agent: "Nikola", model: "Cortex", status: "ok", port: 2229, phone: "+52 444 174 2127", sim: "476431" },
-  { customer: "Lic", agent: "Lic", model: "old proxy", status: "ok", port: 2231, phone: "+52 444 121 6753", sim: "774321" },
-  { customer: "Atena", agent: "Atena", model: "old proxy", status: "ok", port: 2233, phone: "+52 444 121 6753", sim: "614840" },
-  { customer: "Muñeco", agent: "Muñeco", model: "unknown", status: "down", port: 2236 },
-  { customer: "Ted", agent: "Ted", model: "old proxy", status: "degraded", port: 2238, phone: "+52 444 287 4841" },
-  { customer: "Argo", agent: "Argos", model: "Gemini 3.1/oldProxy", status: "down", port: 2239, phone: "+52 444 665 5769", sim: "5004610" },
-  { customer: "Palomino", agent: "Palomino", model: "Cortex", status: "down", port: 2240, phone: "+52 444 496 9014", sim: "640670" },
+  { customer: "EchoPrime", agent: "Echo", model: "unknown", status: "ok", port: 2235, phone: "+52 444 289 3990", born: "2026-02-14", days: 72, notes: "EchoPrime / mothership" },
+  { customer: "Navi", agent: "Navi", model: "old proxy", status: "ok", port: 2221, phone: "+52 444 289 3990", born: "2026-02-14", days: 72 },
+  { customer: "Vera", agent: "Vera", model: "unknown", status: "down", port: 2227, born: "2026-02-18", days: 68 },
+  { customer: "Cherry", agent: "Cherry", model: "unknown", status: "down", port: 2226, born: "2026-02-19", days: 67 },
+  { customer: "Doc", agent: "Doc", model: "old proxy", status: "ok", port: 2222, phone: "+52 444 315 7963", born: "2026-02-20", days: 66 },
+  { customer: "Borz", agent: "Borz", model: "old proxy", status: "ok", port: 2223, phone: "+52 444 315 7963", born: "2026-02-21", days: 65 },
+  { customer: "Ed", agent: "Ed", model: "old proxy", status: "ok", port: 2220, phone: "+52 444 575 3406", sim: "119319", born: "2026-02-23", days: 63 },
+  { customer: "Manolo", agent: "Manolo", model: "old proxy", status: "ok", port: 2225, phone: "+52 444 431 0958", sim: "31707", born: "2026-02-25", days: 61 },
+  { customer: "Lili", agent: "Lili", model: "to check", status: "ok", port: 2228, phone: "+52 485 104 4333", sim: "82665", born: "2026-03-02", days: 56 },
+  { customer: "Nikola", agent: "Nikola", model: "Cortex", status: "ok", port: 2229, phone: "+52 444 174 2127", sim: "476431", born: "2026-03-03", days: 55 },
+  { customer: "Atena", agent: "Atena", model: "old proxy", status: "ok", port: 2233, phone: "+52 444 121 6753", sim: "614840", born: "2026-03-18", days: 40, notes: "⚠️ fleet.md 'Key Agent IDs' lists this id as Lic — Mongo says Atena. Worth reconciling." },
+  { customer: "Lic", agent: "Lic", model: "old proxy", status: "ok", port: 2231, phone: "+52 444 121 6753", sim: "4321F", born: "2026-03-25", days: 33, notes: "Real Lic doc, not in fleet.md key table" },
+  { customer: "Muñeco", agent: "Muñeco", model: "unknown", status: "down", port: 2236, born: "2026-03-28", days: 30 },
+  { customer: "Ted", agent: "Ted", model: "old proxy", status: "down", port: 2238, phone: "+52 444 287 4841", born: "2026-03-31", days: 27 },
+  { customer: "Thor", agent: "Thor", model: "Gemini 3.1/OldProxy", status: "ok", port: 2224, phone: "+52 444 431 0958", sim: "31707", born: "2026-03-31", days: 27 },
+  { customer: "Argos", agent: "Argos", model: "Gemini 3.1/oldProxy", status: "down", port: 2239, phone: "+52 444 665 5769", sim: "5004610", born: "2026-03-31", days: 27, notes: "+ 3 duplicate Argos docs created 2026-04-01 (re-onboards)" },
+  { customer: "Palomino", agent: "Palomino", model: "Cortex", status: "down", port: 2240, phone: "+52 444 496 9014", sim: "640670", born: "2026-04-05", days: 22, notes: "DOWN. Plus 2 earlier 'Palomo' docs from 2026-04-02" },
+  { customer: "Victor", agent: "Victor", model: "unknown", status: "ok", port: 2242, born: "2026-04-22", days: 5, notes: "youngest" },
+  { customer: "Henry", agent: "Henry", model: "unknown", status: "down", port: 2245, sim: "OXXO8009F" },
+  { customer: "LicFausto", agent: "LicFausto", model: "unknown", status: "ok", port: 2244, phone: "+52 444 203 9984", sim: "4136F" },
+  { customer: "Willow", agent: "Willow", model: "unknown", status: "ok", port: 2243 },
+  { customer: "Jesus me entiende", agent: "Jesus me entiende", model: "unknown", status: "ok", port: 2246, phone: "+52 984 186 5182", sim: "3160F" },
+  { customer: "Chaak", agent: "Chaak", model: "unknown", status: "ok", port: 2247, phone: "+52 998 203 0444", sim: "229F" },
 ];
 
-type SortKey = "customer" | "agent" | "model" | "port" | "status";
+type SortKey = "agent" | "port";
 type SortDir = "asc" | "desc" | null;
 
 function SortIcon({ direction }: { direction: SortDir }) {
@@ -53,56 +64,6 @@ function SortIcon({ direction }: { direction: SortDir }) {
     <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
     </svg>
-  );
-}
-
-function getStatusBadge(status: string) {
-  const s = status.toLowerCase().trim();
-  if (s === "ok") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-        {status}
-      </span>
-    );
-  }
-  if (s === "down") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-        <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-        {status}
-      </span>
-    );
-  }
-  if (s === "degraded") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
-        <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-        {status}
-      </span>
-    );
-  }
-  if (s === "whatsunlinked" || s === "whatsapp unlinked") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
-        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-        {status}
-      </span>
-    );
-  }
-  if (s === "issue") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-        <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-        {status}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
-      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-      {status}
-    </span>
   );
 }
 
@@ -131,21 +92,12 @@ export default function ClientsPage() {
       let aVal: string | number = "";
       let bVal: string | number = "";
 
-      if (sortKey === "customer") {
-        aVal = a.customer.toLowerCase();
-        bVal = b.customer.toLowerCase();
-      } else if (sortKey === "agent") {
+      if (sortKey === "agent") {
         aVal = a.agent.toLowerCase();
         bVal = b.agent.toLowerCase();
-      } else if (sortKey === "model") {
-        aVal = a.model.toLowerCase();
-        bVal = b.model.toLowerCase();
       } else if (sortKey === "port") {
         aVal = a.port ?? 0;
         bVal = b.port ?? 0;
-      } else if (sortKey === "status") {
-        aVal = a.status.toLowerCase();
-        bVal = b.status.toLowerCase();
       }
 
       if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
@@ -226,29 +178,11 @@ export default function ClientsPage() {
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th
                   className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
-                  onClick={() => handleSort("customer")}
-                >
-                  <div className="flex items-center gap-1.5">
-                    Customer
-                    <SortIcon direction={getSortDir("customer")} />
-                  </div>
-                </th>
-                <th
-                  className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                   onClick={() => handleSort("agent")}
                 >
                   <div className="flex items-center gap-1.5">
                     Agent
                     <SortIcon direction={getSortDir("agent")} />
-                  </div>
-                </th>
-                <th
-                  className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
-                  onClick={() => handleSort("model")}
-                >
-                  <div className="flex items-center gap-1.5">
-                    Model
-                    <SortIcon direction={getSortDir("model")} />
                   </div>
                 </th>
                 <th
@@ -260,14 +194,11 @@ export default function ClientsPage() {
                     <SortIcon direction={getSortDir("port")} />
                   </div>
                 </th>
-                <th
-                  className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
-                  onClick={() => handleSort("status")}
-                >
-                  <div className="flex items-center gap-1.5">
-                    Status
-                    <SortIcon direction={getSortDir("status")} />
-                  </div>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Born
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Days
                 </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Phone
@@ -280,9 +211,7 @@ export default function ClientsPage() {
             <tbody className="divide-y divide-slate-50">
               {sorted.map((client, i) => (
                 <tr key={i} className="hover:bg-slate-50/70 transition-colors duration-100">
-                  <td className="px-6 py-3.5 font-medium text-slate-800">{client.customer}</td>
-                  <td className="px-6 py-3.5 text-slate-600">{client.agent}</td>
-                  <td className="px-6 py-3.5 text-slate-500 font-mono text-xs">{client.model}</td>
+                  <td className="px-6 py-3.5 font-medium text-slate-800">{client.agent}</td>
                   <td className="px-6 py-3.5">
                     {client.port ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
@@ -292,7 +221,24 @@ export default function ClientsPage() {
                       <span className="text-slate-300 text-xs">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-3.5">{getStatusBadge(client.status)}</td>
+                  <td className="px-6 py-3.5">
+                    {client.born ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                        {client.born}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3.5">
+                    {client.days !== undefined ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-700">
+                        {client.days}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-6 py-3.5 text-slate-600 font-mono text-xs">
                     {client.phone || <span className="text-slate-300">—</span>}
                   </td>

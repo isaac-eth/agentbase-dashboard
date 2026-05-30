@@ -7,8 +7,8 @@ import { signOut, useSession } from "next-auth/react";
 
 const navLinks = [
   { label: "Tasks", href: "/dashboard" },
-  { label: "Roles", href: "/roles" },
-  { label: "Calendar", href: "/calendar" },
+  { label: "Clients", href: "/clients" },
+  { label: "Bot Down", href: "/bot-down" },
 ];
 
 export default function Navbar() {

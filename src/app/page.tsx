@@ -26,7 +26,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password.");
+      setError("Invalid username or password.");
     } else {
       router.push("/dashboard");
       router.refresh();
@@ -56,11 +56,10 @@ export default function LoginPage() {
             Orchestrate your AI agents with precision and control.
           </p>
 
-          <div className="mt-12 grid grid-cols-3 gap-4 text-center">
+          <div className="mt-12 grid grid-cols-2 gap-4 text-center">
             {[
               { label: "Tasks", desc: "Manage work" },
-              { label: "Roles", desc: "Define agents" },
-              { label: "Calendar", desc: "Schedule runs" },
+              { label: "Clients", desc: "Monitor agents" },
             ].map((item) => (
               <div key={item.label} className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
                 <p className="text-white font-semibold text-sm">{item.label}</p>
@@ -96,14 +95,16 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Email
+                Username
               </label>
               <input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="Enter your email"
+                placeholder="Enter your username"
+                autoCapitalize="none"
+                autoCorrect="off"
                 className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition shadow-sm"
               />
             </div>
