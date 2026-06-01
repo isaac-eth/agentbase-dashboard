@@ -66,6 +66,15 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
+    // Absolute 24h session: the user must re-enter their password at least
+    // once a day. maxAge expires the JWT 24h after login; setting updateAge to
+    // the same window stops NextAuth from rolling that expiry forward on
+    // activity, so the 24h is counted from login time, not last request.
+    maxAge: 24 * 60 * 60, // 24 hours
+    updateAge: 24 * 60 * 60, // 24 hours — don't refresh before expiry
+  },
+  jwt: {
+    maxAge: 24 * 60 * 60, // 24 hours — keep the JWT lifetime in sync
   },
   pages: {
     signIn: "/",
