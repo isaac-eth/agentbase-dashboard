@@ -22,8 +22,9 @@ const STORAGE_KEY = "agentbase-tasks";
 // Team members that can be assigned as responsable for a task.
 const TEAM = ["Shaak", "Joel", "Karina", "Miltron"];
 
-// Only these usernames (NextAuth email field, lowercased) can create tasks.
-const CAN_ADD_TASKS = ["shaak", "miltron"];
+// Only these usernames (NextAuth email field, lowercased) can manage tasks:
+// create, edit, delete, and toggle completion. Everyone else is read-only.
+const CAN_MANAGE_TASKS = ["shaak", "miltron"];
 
 const PRIORITY_LABEL: Record<Priority, string> = {
   critical: "Critical",
@@ -132,7 +133,7 @@ const emptyForm: FormState = {
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const canAdd = CAN_ADD_TASKS.includes((session?.user?.email ?? "").toLowerCase());
+  const canManage = CAN_MANAGE_TASKS.includes((session?.user?.email ?? "").toLowerCase());
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -197,7 +198,7 @@ export default function DashboardPage() {
   );
 
   function openCreate() {
-    if (!canAdd) return; // only authorized users can create tasks
+    if (!canManage) return; // only authorized users can create tasks
     setEditingId(null);
     setForm({ ...emptyForm, fechaInicio: nowLocalInput() });
     setError("");
@@ -205,12 +206,14 @@ export default function DashboardPage() {
   }
 
   function toggleComplete(task: Task) {
+    if (!canManage) return; // only authorized users can change completion
     setTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, completed: !t.completed } : t))
     );
   }
 
   function openEdit(task: Task) {
+    if (!canManage) return; // only authorized users can edit tasks
     setEditingId(task.id);
     setForm({
       cliente: task.cliente,
@@ -232,6 +235,7 @@ export default function DashboardPage() {
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (!canManage) return; // only authorized users can save tasks
     const cliente = form.cliente.trim();
     const request = form.request.trim();
     const fechaInicio = form.fechaInicio;
@@ -266,6 +270,7 @@ export default function DashboardPage() {
   }
 
   function handleDelete(task: Task) {
+    if (!canManage) return; // only authorized users can delete tasks
     if (confirm(`¿Eliminar la task de "${task.cliente}"?`)) {
       setTasks((prev) => prev.filter((t) => t.id !== task.id));
     }
@@ -279,7 +284,7 @@ export default function DashboardPage() {
           <h1 className="text-xl md:text-2xl font-bold text-slate-900">Tasks</h1>
           <p className="text-slate-500 text-xs md:text-sm mt-1">Manage and monitor your agent tasks</p>
         </div>
-        {canAdd && (
+        {canManage && (
           <button
             onClick={openCreate}
             className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition-all duration-150 hover:shadow-md hover:shadow-blue-500/25 hover:-translate-y-px min-h-[44px]"
@@ -338,7 +343,7 @@ export default function DashboardPage() {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-12 text-center text-slate-400 text-sm">
-                    {canAdd ? (
+                    {canManage ? (
                       <>
                         No hay tasks todavía. Crea una con el botón{" "}
                         <span className="font-semibold">New Task</span>.
@@ -361,8 +366,11 @@ export default function DashboardPage() {
                         type="checkbox"
                         checked={row.completed}
                         onChange={() => toggleComplete(row)}
+                        disabled={!canManage}
                         aria-label={row.completed ? "Marcar como pendiente" : "Marcar como completada"}
-                        className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer accent-green-600"
+                        className={`w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 accent-green-600 ${
+                          canManage ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+                        }`}
                       />
                     </td>
                     <td className={`px-6 py-3.5 font-medium ${row.completed ? "text-slate-400" : "text-slate-800"}`}>
@@ -425,26 +433,30 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className="px-6 py-3.5">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => openEdit(row)}
-                          aria-label="Editar task"
-                          className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zM19.5 7.125L16.875 4.5" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(row)}
-                          aria-label="Eliminar task"
-                          className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                          </svg>
-                        </button>
-                      </div>
+                      {canManage ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => openEdit(row)}
+                            aria-label="Editar task"
+                            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zM19.5 7.125L16.875 4.5" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row)}
+                            aria-label="Eliminar task"
+                            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-right text-slate-300 text-xs">—</div>
+                      )}
                     </td>
                   </tr>
                 ))
