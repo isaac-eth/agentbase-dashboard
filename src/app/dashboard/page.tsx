@@ -11,9 +11,14 @@ type Task = {
   request: string;
   fechaInicio: string; // registration time (datetime-local / ISO string)
   prioridad: Priority;
+  responsable: string; // team member name, "" = sin asignar
+  fechaLimite: string; // due date "YYYY-MM-DD", "" = sin fecha
 };
 
 const STORAGE_KEY = "agentbase-tasks";
+
+// Team members that can be assigned as responsable for a task.
+const TEAM = ["Shaak", "Joel", "Karina", "Miltron"];
 
 const PRIORITY_LABEL: Record<Priority, string> = {
   critical: "Critical",
@@ -42,6 +47,8 @@ const seedTasks: Task[] = [
     request: "Check API limit in MiniMax",
     fechaInicio: "2026-04-21",
     prioridad: "medium",
+    responsable: "Joel",
+    fechaLimite: "",
   },
 ];
 
@@ -75,13 +82,46 @@ function formatStart(str: string): string {
   });
 }
 
-type FormState = { cliente: string; request: string; fechaInicio: string; prioridad: Priority };
+// Format a date-only string ("YYYY-MM-DD") for display.
+function formatDate(str: string): string {
+  if (!str) return "";
+  // Parse as local date to avoid the UTC off-by-one with "YYYY-MM-DD".
+  const [y, m, d] = str.split("-").map(Number);
+  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
+  if (isNaN(date.getTime())) return str;
+  return date.toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+// A due date is overdue once its day is fully in the past.
+function isOverdue(str: string, now: number): boolean {
+  if (!str) return false;
+  const [y, m, d] = str.split("-").map(Number);
+  const due = new Date(y, (m ?? 1) - 1, d ?? 1);
+  if (isNaN(due.getTime())) return false;
+  due.setHours(23, 59, 59, 999); // end of the due day
+  return now > due.getTime();
+}
+
+type FormState = {
+  cliente: string;
+  request: string;
+  fechaInicio: string;
+  prioridad: Priority;
+  responsable: string;
+  fechaLimite: string;
+};
 
 const emptyForm: FormState = {
   cliente: "",
   request: "",
   fechaInicio: nowLocalInput(),
   prioridad: "medium",
+  responsable: "",
+  fechaLimite: "",
 };
 
 export default function DashboardPage() {
@@ -126,9 +166,20 @@ export default function DashboardPage() {
     () =>
       tasks.map((t) => {
         const prioridad: Priority = t.prioridad ?? "medium";
+        const responsable = t.responsable ?? "";
+        const fechaLimite = t.fechaLimite ?? "";
         const horas = hoursSince(t.fechaInicio, now);
         const isRed = horas >= RED_AFTER_HOURS[prioridad];
-        return { ...t, prioridad, horas: Math.floor(horas), isRed };
+        const overdue = isOverdue(fechaLimite, now);
+        return {
+          ...t,
+          prioridad,
+          responsable,
+          fechaLimite,
+          horas: Math.floor(horas),
+          isRed,
+          overdue,
+        };
       }),
     [tasks, now]
   );
@@ -147,6 +198,8 @@ export default function DashboardPage() {
       request: task.request,
       fechaInicio: toLocalInput(task.fechaInicio),
       prioridad: task.prioridad ?? "medium",
+      responsable: task.responsable ?? "",
+      fechaLimite: task.fechaLimite ?? "",
     });
     setError("");
     setModalOpen(true);
@@ -164,6 +217,8 @@ export default function DashboardPage() {
     const request = form.request.trim();
     const fechaInicio = form.fechaInicio;
     const prioridad = form.prioridad;
+    const responsable = form.responsable;
+    const fechaLimite = form.fechaLimite;
 
     if (!cliente || !request || !fechaInicio) {
       setError("Cliente, Request y Fecha de registro son obligatorios.");
@@ -173,7 +228,9 @@ export default function DashboardPage() {
     if (editingId) {
       setTasks((prev) =>
         prev.map((t) =>
-          t.id === editingId ? { ...t, cliente, request, fechaInicio, prioridad } : t
+          t.id === editingId
+            ? { ...t, cliente, request, fechaInicio, prioridad, responsable, fechaLimite }
+            : t
         )
       );
     } else {
@@ -181,7 +238,10 @@ export default function DashboardPage() {
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
           : `task-${Date.now()}`;
-      setTasks((prev) => [...prev, { id, cliente, request, fechaInicio, prioridad }]);
+      setTasks((prev) => [
+        ...prev,
+        { id, cliente, request, fechaInicio, prioridad, responsable, fechaLimite },
+      ]);
     }
     closeModal();
   }
@@ -234,7 +294,13 @@ export default function DashboardPage() {
                   Prioridad
                 </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Responsable
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Fecha de registro
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Fecha límite
                 </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Horas desde el registro
@@ -247,7 +313,7 @@ export default function DashboardPage() {
             <tbody className="divide-y divide-slate-50">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400 text-sm">
                     No hay tasks todavía. Crea una con el botón <span className="font-semibold">New Task</span>.
                   </td>
                 </tr>
@@ -264,9 +330,32 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className="px-6 py-3.5">
+                      {row.responsable ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                          {row.responsable}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">Sin asignar</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-3.5">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
                         {formatStart(row.fechaInicio)}
                       </span>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      {row.fechaLimite ? (
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            row.overdue ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {formatDate(row.fechaLimite)}
+                          {row.overdue && " · vencida"}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-3.5">
                       <span
@@ -367,11 +456,37 @@ export default function DashboardPage() {
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Responsable</label>
+                <select
+                  value={form.responsable}
+                  onChange={(e) => setForm((f) => ({ ...f, responsable: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition shadow-sm"
+                >
+                  <option value="">Sin asignar</option>
+                  {TEAM.map((member) => (
+                    <option key={member} value={member}>
+                      {member}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Fecha de registro</label>
                 <input
                   type="datetime-local"
                   value={form.fechaInicio}
                   onChange={(e) => setForm((f) => ({ ...f, fechaInicio: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition shadow-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Fecha límite <span className="text-slate-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="date"
+                  value={form.fechaLimite}
+                  onChange={(e) => setForm((f) => ({ ...f, fechaLimite: e.target.value }))}
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition shadow-sm"
                 />
               </div>
