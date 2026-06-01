@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 type Priority = "critical" | "medium" | "low";
@@ -13,12 +14,16 @@ type Task = {
   prioridad: Priority;
   responsable: string; // team member name, "" = sin asignar
   fechaLimite: string; // due date "YYYY-MM-DD", "" = sin fecha
+  completed: boolean; // marked done from the row checkbox
 };
 
 const STORAGE_KEY = "agentbase-tasks";
 
 // Team members that can be assigned as responsable for a task.
 const TEAM = ["Shaak", "Joel", "Karina", "Miltron"];
+
+// Only these usernames (NextAuth email field, lowercased) can create tasks.
+const CAN_ADD_TASKS = ["shaak", "miltron"];
 
 const PRIORITY_LABEL: Record<Priority, string> = {
   critical: "Critical",
@@ -49,6 +54,7 @@ const seedTasks: Task[] = [
     prioridad: "medium",
     responsable: "Joel",
     fechaLimite: "",
+    completed: false,
   },
 ];
 
@@ -125,6 +131,9 @@ const emptyForm: FormState = {
 };
 
 export default function DashboardPage() {
+  const { data: session } = useSession();
+  const canAdd = CAN_ADD_TASKS.includes((session?.user?.email ?? "").toLowerCase());
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -168,14 +177,17 @@ export default function DashboardPage() {
         const prioridad: Priority = t.prioridad ?? "medium";
         const responsable = t.responsable ?? "";
         const fechaLimite = t.fechaLimite ?? "";
+        const completed = t.completed ?? false;
         const horas = hoursSince(t.fechaInicio, now);
-        const isRed = horas >= RED_AFTER_HOURS[prioridad];
-        const overdue = isOverdue(fechaLimite, now);
+        // Completed tasks are done — no red urgency / overdue alarms.
+        const isRed = !completed && horas >= RED_AFTER_HOURS[prioridad];
+        const overdue = !completed && isOverdue(fechaLimite, now);
         return {
           ...t,
           prioridad,
           responsable,
           fechaLimite,
+          completed,
           horas: Math.floor(horas),
           isRed,
           overdue,
@@ -185,10 +197,17 @@ export default function DashboardPage() {
   );
 
   function openCreate() {
+    if (!canAdd) return; // only authorized users can create tasks
     setEditingId(null);
     setForm({ ...emptyForm, fechaInicio: nowLocalInput() });
     setError("");
     setModalOpen(true);
+  }
+
+  function toggleComplete(task: Task) {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, completed: !t.completed } : t))
+    );
   }
 
   function openEdit(task: Task) {
@@ -240,7 +259,7 @@ export default function DashboardPage() {
           : `task-${Date.now()}`;
       setTasks((prev) => [
         ...prev,
-        { id, cliente, request, fechaInicio, prioridad, responsable, fechaLimite },
+        { id, cliente, request, fechaInicio, prioridad, responsable, fechaLimite, completed: false },
       ]);
     }
     closeModal();
@@ -260,15 +279,17 @@ export default function DashboardPage() {
           <h1 className="text-xl md:text-2xl font-bold text-slate-900">Tasks</h1>
           <p className="text-slate-500 text-xs md:text-sm mt-1">Manage and monitor your agent tasks</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition-all duration-150 hover:shadow-md hover:shadow-blue-500/25 hover:-translate-y-px min-h-[44px]"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          New Task
-        </button>
+        {canAdd && (
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition-all duration-150 hover:shadow-md hover:shadow-blue-500/25 hover:-translate-y-px min-h-[44px]"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            New Task
+          </button>
+        )}
       </div>
 
       {/* Tasks table */}
@@ -284,6 +305,9 @@ export default function DashboardPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-12">
+                  Hecho
+                </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Cliente
                 </th>
@@ -291,7 +315,7 @@ export default function DashboardPage() {
                   Request
                 </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Prioridad
+                  Estatus
                 </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Responsable
@@ -313,21 +337,55 @@ export default function DashboardPage() {
             <tbody className="divide-y divide-slate-50">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400 text-sm">
-                    No hay tasks todavía. Crea una con el botón <span className="font-semibold">New Task</span>.
+                  <td colSpan={9} className="px-6 py-12 text-center text-slate-400 text-sm">
+                    {canAdd ? (
+                      <>
+                        No hay tasks todavía. Crea una con el botón{" "}
+                        <span className="font-semibold">New Task</span>.
+                      </>
+                    ) : (
+                      "No hay tasks todavía."
+                    )}
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50/70 transition-colors duration-100">
-                    <td className="px-6 py-3.5 font-medium text-slate-800">{row.cliente}</td>
-                    <td className="px-6 py-3.5 text-slate-600">{row.request}</td>
+                  <tr
+                    key={row.id}
+                    className={`transition-colors duration-100 ${
+                      row.completed ? "bg-green-50/60 hover:bg-green-50" : "hover:bg-slate-50/70"
+                    }`}
+                  >
+                    <td className="px-4 py-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={row.completed}
+                        onChange={() => toggleComplete(row)}
+                        aria-label={row.completed ? "Marcar como pendiente" : "Marcar como completada"}
+                        className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer accent-green-600"
+                      />
+                    </td>
+                    <td className={`px-6 py-3.5 font-medium ${row.completed ? "text-slate-400" : "text-slate-800"}`}>
+                      {row.cliente}
+                    </td>
+                    <td className={`px-6 py-3.5 ${row.completed ? "text-slate-400 line-through" : "text-slate-600"}`}>
+                      {row.request}
+                    </td>
                     <td className="px-6 py-3.5">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${PRIORITY_BADGE[row.prioridad]}`}
-                      >
-                        {PRIORITY_LABEL[row.prioridad]}
-                      </span>
+                      {row.completed ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          Completado
+                        </span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${PRIORITY_BADGE[row.prioridad]}`}
+                        >
+                          {PRIORITY_LABEL[row.prioridad]}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-3.5">
                       {row.responsable ? (
@@ -444,7 +502,7 @@ export default function DashboardPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Prioridad</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Estatus</label>
                 <select
                   value={form.prioridad}
                   onChange={(e) => setForm((f) => ({ ...f, prioridad: e.target.value as Priority }))}
