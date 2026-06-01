@@ -46,6 +46,24 @@ const RED_AFTER_HOURS: Record<Priority, number> = {
   low: 12,
 };
 
+// Order used when sorting by "Estatus": critical → medium → low, completed last.
+const PRIORITY_RANK: Record<Priority, number> = {
+  critical: 0,
+  medium: 1,
+  low: 2,
+};
+
+// Columns the table can be sorted by (clicking the header).
+type SortKey =
+  | "cliente"
+  | "request"
+  | "estatus"
+  | "responsable"
+  | "fechaInicio"
+  | "fechaLimite"
+  | "horas";
+type SortDir = "asc" | "desc";
+
 const seedTasks: Task[] = [
   {
     id: "seed-1",
@@ -139,6 +157,9 @@ export default function DashboardPage() {
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
+  // Sorting: click a header to sort asc → desc → off.
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
+
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -196,6 +217,55 @@ export default function DashboardPage() {
       }),
     [tasks, now]
   );
+
+  type Row = (typeof rows)[number];
+
+  // Comparable value for each sortable column.
+  function sortValue(row: Row, key: SortKey): string | number {
+    switch (key) {
+      case "cliente":
+        return row.cliente.toLowerCase();
+      case "request":
+        return row.request.toLowerCase();
+      case "estatus":
+        // critical → medium → low, then completed at the end.
+        return row.completed ? 3 : PRIORITY_RANK[row.prioridad];
+      case "responsable":
+        // Sin asignar ("") sorts to the end.
+        return row.responsable ? row.responsable.toLowerCase() : "￿";
+      case "fechaInicio": {
+        const t = new Date(row.fechaInicio).getTime();
+        return isNaN(t) ? Infinity : t;
+      }
+      case "fechaLimite":
+        // No due date sorts to the end.
+        return row.fechaLimite ? new Date(row.fechaLimite).getTime() : Infinity;
+      case "horas":
+        return row.horas;
+    }
+  }
+
+  const sortedRows = useMemo(() => {
+    if (!sort) return rows;
+    const factor = sort.dir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const va = sortValue(a, sort.key);
+      const vb = sortValue(b, sort.key);
+      if (va < vb) return -1 * factor;
+      if (va > vb) return 1 * factor;
+      return 0;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, sort]);
+
+  // asc → desc → off (clears) on repeated clicks of the same column.
+  function toggleSort(key: SortKey) {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "asc" };
+      if (prev.dir === "asc") return { key, dir: "desc" };
+      return null;
+    });
+  }
 
   function openCreate() {
     if (!canManage) return; // only authorized users can create tasks
@@ -276,6 +346,26 @@ export default function DashboardPage() {
     }
   }
 
+  // Renders a clickable, sortable column header with a direction arrow.
+  function sortableTh(label: string, key: SortKey, align: "left" | "right" = "left") {
+    const active = sort?.key === key;
+    const arrow = active ? (sort!.dir === "asc" ? "↑" : "↓") : "↕";
+    return (
+      <th className={`${align === "right" ? "text-right" : "text-left"} px-6 py-3`}>
+        <button
+          type="button"
+          onClick={() => toggleSort(key)}
+          className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
+            active ? "text-blue-600" : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          {label}
+          <span className={`text-[10px] ${active ? "text-blue-600" : "text-slate-300"}`}>{arrow}</span>
+        </button>
+      </th>
+    );
+  }
+
   return (
     <DashboardLayout>
       {/* Header */}
@@ -313,27 +403,13 @@ export default function DashboardPage() {
                 <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-12">
                   Hecho
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Request
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Estatus
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Responsable
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Fecha de registro
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Fecha límite
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Horas desde el registro
-                </th>
+                {sortableTh("Cliente", "cliente")}
+                {sortableTh("Request", "request")}
+                {sortableTh("Estatus", "estatus")}
+                {sortableTh("Responsable", "responsable")}
+                {sortableTh("Fecha de registro", "fechaInicio")}
+                {sortableTh("Fecha límite", "fechaLimite")}
+                {sortableTh("Horas desde el registro", "horas")}
                 <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Acciones
                 </th>
@@ -354,7 +430,7 @@ export default function DashboardPage() {
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => (
+                sortedRows.map((row) => (
                   <tr
                     key={row.id}
                     className={`transition-colors duration-100 ${
