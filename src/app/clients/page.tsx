@@ -1,120 +1,43 @@
-"use client";
-
-import { useState, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import ClientsTable from "./ClientsTable";
+import { LEDGER_URL, REVALIDATE_SECONDS, mergeLedger, type MergeResult } from "./data";
 
-type Client = {
-  customer: string;
-  agent: string;
-  model: string;
-  status: string;
-  port?: number;
-  phone?: string;
-  sim?: string;
-  born?: string;
-  days?: number;
-  notes?: string;
-  payAmount?: string;
-  payDate?: string;
-};
+// Re-generate this page at most once every 12 hours (Next.js ISR on Vercel).
+// On the first request after the window elapses, the page is rebuilt with a
+// fresh pull of bolsa.me/bitso's customer ledger.
+export const revalidate = 43200;
 
-const clients: Client[] = [
-  { customer: "EchoPrime", agent: "Echo", model: "unknown", status: "ok", port: 2235, phone: "+52 444 289 3990", born: "2026-02-14", days: 72, notes: "EchoPrime / mothership" },
-  { customer: "Navi", agent: "Navi", model: "old proxy", status: "ok", port: 2221, phone: "+52 444 289 3990", born: "2026-02-14", days: 72, payAmount: "$5,000.00 MXN", payDate: "2026-05-28" },
-  { customer: "Vera", agent: "Vera", model: "unknown", status: "down", port: 2227, born: "2026-02-18", days: 68 },
-  { customer: "Cherry", agent: "Cherry", model: "unknown", status: "down", port: 2226, born: "2026-02-19", days: 67 },
-  { customer: "Doc", agent: "Doc", model: "old proxy", status: "ok", port: 2222, phone: "+52 444 315 7963", born: "2026-02-20", days: 66, payAmount: "$9,900.00 MXN", payDate: "2026-06-23" },
-  { customer: "Borz", agent: "Borz", model: "old proxy", status: "ok", port: 2223, phone: "+52 444 315 7963", born: "2026-02-21", days: 65, payAmount: "$9,900.00 MXN", payDate: "2026-05-28" },
-  { customer: "Ed", agent: "Ed", model: "old proxy", status: "ok", port: 2220, phone: "+52 444 575 3406", sim: "119319", born: "2026-02-23", days: 63 },
-  { customer: "Manolo", agent: "Manolo", model: "old proxy", status: "ok", port: 2225, phone: "+52 444 431 0958", sim: "31707", born: "2026-02-25", days: 61, payAmount: "350 USD", payDate: "Pendiente" },
-  { customer: "Lili", agent: "Lili", model: "to check", status: "ok", port: 2228, phone: "+52 485 104 4333", sim: "82665", born: "2026-03-02", days: 56, payAmount: "$9,900.00 MXN", payDate: "2026-05-29" },
-  { customer: "Nikola", agent: "Nikola", model: "Cortex", status: "ok", port: 2229, phone: "+52 444 174 2127", sim: "476431", born: "2026-03-03", days: 55, payAmount: "$9,900.00 MXN", payDate: "2026-06-09" },
-  { customer: "Atena", agent: "Atena", model: "old proxy", status: "ok", port: 2233, phone: "+52 444 121 6753", sim: "614840", born: "2026-03-18", days: 40, payAmount: "350 USD", payDate: "2026-06-01", notes: "⚠️ fleet.md 'Key Agent IDs' lists this id as Lic — Mongo says Atena. Worth reconciling." },
-  { customer: "Lic", agent: "Lic", model: "old proxy", status: "ok", port: 2231, phone: "+52 444 121 6753", sim: "4321F", born: "2026-03-25", days: 33, notes: "Real Lic doc, not in fleet.md key table" },
-  { customer: "Muñeco", agent: "Muñeco", model: "unknown", status: "down", port: 2236, born: "2026-03-28", days: 30, payAmount: "$9,900.00 MXN", payDate: "2026-05-28" },
-  { customer: "Ted", agent: "Ted", model: "old proxy", status: "down", port: 2238, phone: "+52 444 287 4841", born: "2026-03-31", days: 27 },
-  { customer: "Thor", agent: "Thor", model: "Gemini 3.1/OldProxy", status: "ok", port: 2224, phone: "+52 444 431 0958", sim: "31707", born: "2026-03-31", days: 27, payAmount: "350 USD", payDate: "2026-06-01" },
-  { customer: "Argos", agent: "Argos", model: "Gemini 3.1/oldProxy", status: "down", port: 2239, phone: "+52 444 665 5769", sim: "5004610", born: "2026-03-31", days: 27, payAmount: "350 USD", payDate: "2026-06-01", notes: "+ 3 duplicate Argos docs created 2026-04-01 (re-onboards)" },
-  { customer: "Palomino", agent: "Palomino", model: "Cortex", status: "down", port: 2240, phone: "+52 444 496 9014", sim: "640670", born: "2026-04-05", days: 22, payAmount: "$14,900.00 MXN", payDate: "2026-06-02", notes: "DOWN. Plus 2 earlier 'Palomo' docs from 2026-04-02" },
-  { customer: "Victor", agent: "Victor", model: "unknown", status: "ok", port: 2242, born: "2026-04-22", days: 5, payAmount: "$14,900.00 MXN", payDate: "2026-06-23", notes: "youngest" },
-  { customer: "Henry", agent: "Henry", model: "unknown", status: "down", port: 2245, sim: "OXXO8009F", payAmount: "$14,900.00 MXN", payDate: "2026-06-22" },
-  { customer: "LicFausto", agent: "LicFausto", model: "unknown", status: "ok", port: 2244, phone: "+52 444 203 9984", sim: "4136F" },
-  { customer: "Willow", agent: "Willow", model: "unknown", status: "ok", port: 2243, payAmount: "$19,800.00 MXN", payDate: "2026-06-06" },
-  { customer: "Jesus me entiende", agent: "Jesus me entiende", model: "unknown", status: "ok", port: 2246, phone: "+52 984 186 5182", sim: "3160F", payAmount: "$14,990.00 MXN", payDate: "2026-06-25" },
-  { customer: "Chaak", agent: "Chaak", model: "unknown", status: "ok", port: 2247, phone: "+52 998 203 0444", sim: "229F", payAmount: "$14,900.00 MXN", payDate: "Pendiente" },
-];
-
-type SortKey = "agent" | "port";
-type SortDir = "asc" | "desc" | null;
-
-function SortIcon({ direction }: { direction: SortDir }) {
-  if (direction === null) {
-    return (
-      <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-      </svg>
-    );
+async function loadClients(): Promise<MergeResult> {
+  try {
+    const res = await fetch(LEDGER_URL, { next: { revalidate: REVALIDATE_SECONDS } });
+    if (!res.ok) throw new Error(`ledger fetch failed: ${res.status}`);
+    const ledger = await res.json();
+    return mergeLedger(ledger);
+  } catch (err) {
+    console.error("[clients] falling back to static payment data:", err);
+    return mergeLedger(null);
   }
-  if (direction === "asc") {
-    return (
-      <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-      </svg>
-    );
-  }
-  return (
-    <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-    </svg>
-  );
 }
 
-export default function ClientsPage() {
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>(null);
+function formatUpdated(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString("es-MX", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      if (sortDir === "asc") {
-        setSortDir("desc");
-      } else if (sortDir === "desc") {
-        setSortKey(null);
-        setSortDir(null);
-      }
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  };
-
-  const sorted = useMemo(() => {
-    if (!sortKey || !sortDir) return clients;
-
-    return [...clients].sort((a, b) => {
-      let aVal: string | number = "";
-      let bVal: string | number = "";
-
-      if (sortKey === "agent") {
-        aVal = a.agent.toLowerCase();
-        bVal = b.agent.toLowerCase();
-      } else if (sortKey === "port") {
-        aVal = a.port ?? 0;
-        bVal = b.port ?? 0;
-      }
-
-      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [sortKey, sortDir]);
+export default async function ClientsPage() {
+  const { clients, ledgerUpdatedAt, live } = await loadClients();
 
   const okCount = clients.filter((c) => c.status.toLowerCase().trim() === "ok").length;
   const issueCount = clients.filter((c) => c.status.toLowerCase().trim() !== "ok").length;
-
-  const getSortDir = (key: SortKey): SortDir => {
-    if (sortKey !== key) return null;
-    return sortDir;
-  };
+  const updatedLabel = formatUpdated(ledgerUpdatedAt);
 
   return (
     <DashboardLayout>
@@ -165,130 +88,23 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">All Clients</h2>
-          <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
-            {clients.length} clients
+      {/* Payment data freshness */}
+      <div className="mb-3 flex items-center gap-2 text-xs text-slate-400">
+        <span
+          className={`inline-block w-1.5 h-1.5 rounded-full ${live ? "bg-emerald-500" : "bg-amber-500"}`}
+        />
+        {live ? (
+          <span>
+            Datos de pago en vivo desde bolsa.me/bitso
+            {updatedLabel ? ` · actualizado ${updatedLabel}` : ""} · se refresca cada 12 h
           </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th
-                  className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
-                  onClick={() => handleSort("agent")}
-                >
-                  <div className="flex items-center gap-1.5">
-                    Agent
-                    <SortIcon direction={getSortDir("agent")} />
-                  </div>
-                </th>
-                <th
-                  className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
-                  onClick={() => handleSort("port")}
-                >
-                  <div className="flex items-center gap-1.5">
-                    Port
-                    <SortIcon direction={getSortDir("port")} />
-                  </div>
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Born
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Days
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Phone
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  SIM
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Fecha de Pago
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Monto de Pago
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {sorted.map((client, i) => (
-                <tr key={i} className="hover:bg-slate-50/70 transition-colors duration-100">
-                  <td className="px-6 py-3.5 font-medium text-slate-800">{client.agent}</td>
-                  <td className="px-6 py-3.5">
-                    {client.port ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
-                        {client.port}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300 text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    {client.born ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
-                        {client.born}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300 text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    {client.days !== undefined ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-700">
-                        {client.days}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300 text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3.5 text-slate-600 font-mono text-xs">
-                    {client.phone || <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    {client.sim ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
-                        {client.sim}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300 text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    {client.payDate ? (
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          client.payDate === "Pendiente"
-                            ? "bg-slate-100 text-slate-500"
-                            : "bg-rose-100 text-rose-700"
-                        }`}
-                      >
-                        {client.payDate}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300 text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    {client.payAmount ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                        {client.payAmount}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300 text-xs">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        ) : (
+          <span>Datos de pago de respaldo (no se pudo contactar bolsa.me/bitso)</span>
+        )}
       </div>
+
+      {/* Table */}
+      <ClientsTable clients={clients} />
     </DashboardLayout>
   );
 }
