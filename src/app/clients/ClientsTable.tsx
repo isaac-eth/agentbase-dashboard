@@ -21,8 +21,60 @@ function statusChipClasses(label: string): string {
   }
 }
 
-type SortKey = "agent" | "port";
+type SortKey =
+  | "agent"
+  | "port"
+  | "born"
+  | "days"
+  | "phone"
+  | "sim"
+  | "payDate"
+  | "payAmount"
+  | "payStatus";
 type SortDir = "asc" | "desc" | null;
+
+// Status sort follows urgency, not the alphabet: most urgent first when asc.
+const STATUS_RANK: Record<string, number> = {
+  OVERDUE: 0,
+  "DUE SOON": 1,
+  PENDING: 2,
+  "BOX DOWN": 3,
+  "ON TRACK": 4,
+};
+
+// Returns a comparable value for a column, or null for "empty" cells which
+// always sink to the bottom regardless of sort direction.
+function sortValue(c: Client, key: SortKey): string | number | null {
+  switch (key) {
+    case "agent":
+      return c.agent.toLowerCase();
+    case "port":
+      return c.port ?? null;
+    case "born":
+      // ISO date strings sort lexically the same as chronologically.
+      return c.born ?? null;
+    case "days":
+      return c.days ?? null;
+    case "phone":
+      return c.phone?.toLowerCase() ?? null;
+    case "sim":
+      return c.sim?.toLowerCase() ?? null;
+    case "payDate": {
+      if (!c.payDate) return null;
+      const t = Date.parse(c.payDate);
+      // Non-date phrases ("Pendiente", "Cobrar ahora") sink to the bottom.
+      return Number.isFinite(t) ? t : null;
+    }
+    case "payAmount": {
+      if (!c.payAmount) return null;
+      const n = parseFloat(c.payAmount.replace(/[^0-9.]/g, ""));
+      return Number.isFinite(n) ? n : null;
+    }
+    case "payStatus":
+      if (!c.payStatus) return null;
+      return STATUS_RANK[c.payStatus] ?? 99;
+  }
+}
 
 function SortIcon({ direction }: { direction: SortDir }) {
   if (direction === null) {
@@ -67,20 +119,18 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
   const sorted = useMemo(() => {
     if (!sortKey || !sortDir) return clients;
 
+    const dir = sortDir === "asc" ? 1 : -1;
     return [...clients].sort((a, b) => {
-      let aVal: string | number = "";
-      let bVal: string | number = "";
+      const aVal = sortValue(a, sortKey);
+      const bVal = sortValue(b, sortKey);
 
-      if (sortKey === "agent") {
-        aVal = a.agent.toLowerCase();
-        bVal = b.agent.toLowerCase();
-      } else if (sortKey === "port") {
-        aVal = a.port ?? 0;
-        bVal = b.port ?? 0;
-      }
+      // Empty cells always sink to the bottom, regardless of direction.
+      if (aVal === null && bVal === null) return 0;
+      if (aVal === null) return 1;
+      if (bVal === null) return -1;
 
-      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      if (aVal < bVal) return -1 * dir;
+      if (aVal > bVal) return 1 * dir;
       return 0;
     });
   }, [clients, sortKey, sortDir]);
@@ -121,26 +171,68 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
                   <SortIcon direction={getSortDir("port")} />
                 </div>
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Born
+              <th
+                className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                onClick={() => handleSort("born")}
+              >
+                <div className="flex items-center gap-1.5">
+                  Born
+                  <SortIcon direction={getSortDir("born")} />
+                </div>
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Days
+              <th
+                className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                onClick={() => handleSort("days")}
+              >
+                <div className="flex items-center gap-1.5">
+                  Days
+                  <SortIcon direction={getSortDir("days")} />
+                </div>
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Phone
+              <th
+                className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                onClick={() => handleSort("phone")}
+              >
+                <div className="flex items-center gap-1.5">
+                  Phone
+                  <SortIcon direction={getSortDir("phone")} />
+                </div>
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                SIM
+              <th
+                className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                onClick={() => handleSort("sim")}
+              >
+                <div className="flex items-center gap-1.5">
+                  SIM
+                  <SortIcon direction={getSortDir("sim")} />
+                </div>
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Fecha de Pago
+              <th
+                className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                onClick={() => handleSort("payDate")}
+              >
+                <div className="flex items-center gap-1.5">
+                  Fecha de Pago
+                  <SortIcon direction={getSortDir("payDate")} />
+                </div>
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Monto de Pago
+              <th
+                className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                onClick={() => handleSort("payAmount")}
+              >
+                <div className="flex items-center gap-1.5">
+                  Monto de Pago
+                  <SortIcon direction={getSortDir("payAmount")} />
+                </div>
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Status
+              <th
+                className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                onClick={() => handleSort("payStatus")}
+              >
+                <div className="flex items-center gap-1.5">
+                  Status
+                  <SortIcon direction={getSortDir("payStatus")} />
+                </div>
               </th>
             </tr>
           </thead>
