@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Client } from "./data";
 
 // Colors mirror bolsa.me/bitso's status-chip tones.
@@ -30,7 +30,8 @@ type SortKey =
   | "sim"
   | "payDate"
   | "payAmount"
-  | "payStatus";
+  | "payStatus"
+  | "paySent";
 type SortDir = "asc" | "desc" | null;
 
 // Status sort follows urgency, not the alphabet: most urgent first when asc.
@@ -44,8 +45,14 @@ const STATUS_RANK: Record<string, number> = {
 
 // Returns a comparable value for a column, or null for "empty" cells which
 // always sink to the bottom regardless of sort direction.
-function sortValue(c: Client, key: SortKey): string | number | null {
+function sortValue(
+  c: Client,
+  key: SortKey,
+  sentMap: Record<string, boolean>,
+): string | number | null {
   switch (key) {
+    case "paySent":
+      return sentMap[c.agent] ? 1 : 0;
     case "agent":
       return c.agent.toLowerCase();
     case "port":
@@ -102,6 +109,45 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
 
+  // "Info Enviada" state — which clients have already been sent payment info.
+  // Loaded from /api/payment-sent (shared across devices/users via Vercel KV).
+  const [sentMap, setSentMap] = useState<Record<string, boolean>>({});
+  // null = still loading; false = storage not provisioned (checkboxes locked).
+  const [storageReady, setStorageReady] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/payment-sent")
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((data: { configured: boolean; sent: Record<string, boolean> }) => {
+        if (!active) return;
+        setSentMap(data.sent ?? {});
+        setStorageReady(Boolean(data.configured));
+      })
+      .catch(() => active && setStorageReady(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toggleSent = useCallback(
+    async (agent: string, next: boolean) => {
+      // Optimistic update; revert if the request fails.
+      setSentMap((prev) => ({ ...prev, [agent]: next }));
+      try {
+        const res = await fetch("/api/payment-sent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agent, sent: next }),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+      } catch {
+        setSentMap((prev) => ({ ...prev, [agent]: !next }));
+      }
+    },
+    [],
+  );
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       if (sortDir === "asc") {
@@ -121,8 +167,8 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
 
     const dir = sortDir === "asc" ? 1 : -1;
     return [...clients].sort((a, b) => {
-      const aVal = sortValue(a, sortKey);
-      const bVal = sortValue(b, sortKey);
+      const aVal = sortValue(a, sortKey, sentMap);
+      const bVal = sortValue(b, sortKey, sentMap);
 
       // Empty cells always sink to the bottom, regardless of direction.
       if (aVal === null && bVal === null) return 0;
@@ -133,7 +179,7 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
       if (aVal > bVal) return 1 * dir;
       return 0;
     });
-  }, [clients, sortKey, sortDir]);
+  }, [clients, sortKey, sortDir, sentMap]);
 
   const getSortDir = (key: SortKey): SortDir => {
     if (sortKey !== key) return null;
@@ -234,6 +280,20 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
                   <SortIcon direction={getSortDir("payStatus")} />
                 </div>
               </th>
+              <th
+                className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                onClick={() => handleSort("paySent")}
+                title={
+                  storageReady === false
+                    ? "Almacenamiento no configurado — las casillas están bloqueadas"
+                    : undefined
+                }
+              >
+                <div className="flex items-center gap-1.5">
+                  Info Enviada
+                  <SortIcon direction={getSortDir("paySent")} />
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -315,6 +375,16 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
                   ) : (
                     <span className="text-slate-300 text-xs">—</span>
                   )}
+                </td>
+                <td className="px-6 py-3.5">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(sentMap[client.agent])}
+                    disabled={storageReady !== true}
+                    onChange={(e) => toggleSent(client.agent, e.target.checked)}
+                    aria-label={`Marcar info de pago enviada para ${client.agent}`}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  />
                 </td>
               </tr>
             ))}
