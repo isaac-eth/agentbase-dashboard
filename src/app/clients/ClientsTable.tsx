@@ -3,6 +3,24 @@
 import { useState, useMemo } from "react";
 import type { Client } from "./data";
 
+// Colors mirror bolsa.me/bitso's status-chip tones.
+function statusChipClasses(label: string): string {
+  switch (label) {
+    case "OVERDUE":
+      return "bg-red-100 text-red-700";
+    case "DUE SOON":
+      return "bg-amber-100 text-amber-700";
+    case "ON TRACK":
+      return "bg-emerald-100 text-emerald-700";
+    case "PENDING":
+      return "bg-blue-100 text-blue-700";
+    case "BOX DOWN":
+      return "bg-slate-200 text-slate-600";
+    default:
+      return "bg-slate-100 text-slate-500";
+  }
+}
+
 type SortKey = "agent" | "port";
 type SortDir = "asc" | "desc" | null;
 
@@ -121,6 +139,9 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Monto de Pago
               </th>
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Status
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -185,6 +206,19 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
                   {client.payAmount ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
                       {client.payAmount}
+                    </span>
+                  ) : (
+                    <span className="text-slate-300 text-xs">—</span>
+                  )}
+                </td>
+                <td className="px-6 py-3.5">
+                  {client.payStatus ? (
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tracking-wide ${statusChipClasses(
+                        client.payStatus,
+                      )}`}
+                    >
+                      {client.payStatus}
                     </span>
                   ) : (
                     <span className="text-slate-300 text-xs">—</span>

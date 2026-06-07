@@ -11,6 +11,7 @@ export type Client = {
   notes?: string;
   payAmount?: string;
   payDate?: string;
+  payStatus?: string;
 };
 
 // Base roster. Fleet-specific fields (port, phone, sim, etc.) live here.
@@ -49,7 +50,9 @@ type LedgerCustomer = {
   agent: string;
   amount?: number;
   currency?: string;
+  invoiceDay?: number | null;
   nextInvoiceDate?: string | null;
+  boxStatus?: string;
 };
 
 type Ledger = {
@@ -81,6 +84,35 @@ function formatPayDate(next?: string | null): string {
   return next;
 }
 
+// Mirrors bolsa.me's daysUntil: whole days from now to the due date (ceil).
+function daysUntil(dateStr?: string | null): number | null {
+  if (!dateStr) return null;
+  const due = new Date(dateStr).getTime();
+  if (!Number.isFinite(due)) return null;
+  return Math.ceil((due - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
+// Mirrors bolsa.me's deriveNextInvoiceDate: use nextInvoiceDate, else the next
+// occurrence of invoiceDay.
+function deriveNextInvoiceDate(next?: string | null, invoiceDay?: number | null): string | null {
+  if (next && /^\d{4}-\d{2}-\d{2}$/.test(next)) return next;
+  if (next) return null; // non-date phrase like "collect now"
+  if (!invoiceDay || !Number.isFinite(invoiceDay)) return null;
+  const base = new Date();
+  const due = new Date(base.getFullYear(), base.getMonth(), invoiceDay);
+  if (base.getDate() >= invoiceDay) due.setMonth(due.getMonth() + 1);
+  return due.toISOString().slice(0, 10);
+}
+
+// Mirrors bolsa.me's customerStatusChip.
+function statusLabel(boxStatus: string | undefined, days: number | null): string {
+  if (boxStatus === "PENDING") return "PENDING";
+  if (boxStatus && boxStatus !== "UP") return "BOX DOWN";
+  if (days !== null && days < 0) return "OVERDUE";
+  if (days !== null && days <= 7) return "DUE SOON";
+  return "ON TRACK";
+}
+
 export type MergeResult = {
   clients: Client[];
   /** Timestamp the live ledger was generated, or null if the fetch failed. */
@@ -93,7 +125,13 @@ export type MergeResult = {
 // (case-insensitive). Fleet fields are always preserved from baseClients.
 export function mergeLedger(ledger: Ledger | null): MergeResult {
   if (!ledger?.customers?.length) {
-    return { clients: baseClients, ledgerUpdatedAt: null, live: false };
+    // No live data: derive a best-effort status from the static fallback dates.
+    const clients = baseClients.map((client) =>
+      client.payDate
+        ? { ...client, payStatus: statusLabel("UP", daysUntil(client.payDate)) }
+        : client,
+    );
+    return { clients, ledgerUpdatedAt: null, live: false };
   }
 
   const byAgent = new Map<string, LedgerCustomer>();
@@ -104,10 +142,12 @@ export function mergeLedger(ledger: Ledger | null): MergeResult {
   const clients = baseClients.map((client) => {
     const match = byAgent.get(client.agent.trim().toLowerCase());
     if (!match) return client;
+    const effectiveDate = deriveNextInvoiceDate(match.nextInvoiceDate, match.invoiceDay);
     return {
       ...client,
       payAmount: formatMoney(match.amount, match.currency) ?? client.payAmount,
       payDate: formatPayDate(match.nextInvoiceDate),
+      payStatus: statusLabel(match.boxStatus, daysUntil(effectiveDate)),
     };
   });
 
