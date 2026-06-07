@@ -14,32 +14,34 @@ type Client = {
   born?: string;
   days?: number;
   notes?: string;
+  payAmount?: string;
+  payDate?: string;
 };
 
 const clients: Client[] = [
   { customer: "EchoPrime", agent: "Echo", model: "unknown", status: "ok", port: 2235, phone: "+52 444 289 3990", born: "2026-02-14", days: 72, notes: "EchoPrime / mothership" },
-  { customer: "Navi", agent: "Navi", model: "old proxy", status: "ok", port: 2221, phone: "+52 444 289 3990", born: "2026-02-14", days: 72 },
+  { customer: "Navi", agent: "Navi", model: "old proxy", status: "ok", port: 2221, phone: "+52 444 289 3990", born: "2026-02-14", days: 72, payAmount: "$5,000.00 MXN", payDate: "2026-05-28" },
   { customer: "Vera", agent: "Vera", model: "unknown", status: "down", port: 2227, born: "2026-02-18", days: 68 },
   { customer: "Cherry", agent: "Cherry", model: "unknown", status: "down", port: 2226, born: "2026-02-19", days: 67 },
-  { customer: "Doc", agent: "Doc", model: "old proxy", status: "ok", port: 2222, phone: "+52 444 315 7963", born: "2026-02-20", days: 66 },
-  { customer: "Borz", agent: "Borz", model: "old proxy", status: "ok", port: 2223, phone: "+52 444 315 7963", born: "2026-02-21", days: 65 },
+  { customer: "Doc", agent: "Doc", model: "old proxy", status: "ok", port: 2222, phone: "+52 444 315 7963", born: "2026-02-20", days: 66, payAmount: "$9,900.00 MXN", payDate: "2026-06-23" },
+  { customer: "Borz", agent: "Borz", model: "old proxy", status: "ok", port: 2223, phone: "+52 444 315 7963", born: "2026-02-21", days: 65, payAmount: "$9,900.00 MXN", payDate: "2026-05-28" },
   { customer: "Ed", agent: "Ed", model: "old proxy", status: "ok", port: 2220, phone: "+52 444 575 3406", sim: "119319", born: "2026-02-23", days: 63 },
-  { customer: "Manolo", agent: "Manolo", model: "old proxy", status: "ok", port: 2225, phone: "+52 444 431 0958", sim: "31707", born: "2026-02-25", days: 61 },
-  { customer: "Lili", agent: "Lili", model: "to check", status: "ok", port: 2228, phone: "+52 485 104 4333", sim: "82665", born: "2026-03-02", days: 56 },
-  { customer: "Nikola", agent: "Nikola", model: "Cortex", status: "ok", port: 2229, phone: "+52 444 174 2127", sim: "476431", born: "2026-03-03", days: 55 },
-  { customer: "Atena", agent: "Atena", model: "old proxy", status: "ok", port: 2233, phone: "+52 444 121 6753", sim: "614840", born: "2026-03-18", days: 40, notes: "⚠️ fleet.md 'Key Agent IDs' lists this id as Lic — Mongo says Atena. Worth reconciling." },
+  { customer: "Manolo", agent: "Manolo", model: "old proxy", status: "ok", port: 2225, phone: "+52 444 431 0958", sim: "31707", born: "2026-02-25", days: 61, payAmount: "350 USD", payDate: "Pendiente" },
+  { customer: "Lili", agent: "Lili", model: "to check", status: "ok", port: 2228, phone: "+52 485 104 4333", sim: "82665", born: "2026-03-02", days: 56, payAmount: "$9,900.00 MXN", payDate: "2026-05-29" },
+  { customer: "Nikola", agent: "Nikola", model: "Cortex", status: "ok", port: 2229, phone: "+52 444 174 2127", sim: "476431", born: "2026-03-03", days: 55, payAmount: "$9,900.00 MXN", payDate: "2026-06-09" },
+  { customer: "Atena", agent: "Atena", model: "old proxy", status: "ok", port: 2233, phone: "+52 444 121 6753", sim: "614840", born: "2026-03-18", days: 40, payAmount: "350 USD", payDate: "2026-06-01", notes: "⚠️ fleet.md 'Key Agent IDs' lists this id as Lic — Mongo says Atena. Worth reconciling." },
   { customer: "Lic", agent: "Lic", model: "old proxy", status: "ok", port: 2231, phone: "+52 444 121 6753", sim: "4321F", born: "2026-03-25", days: 33, notes: "Real Lic doc, not in fleet.md key table" },
-  { customer: "Muñeco", agent: "Muñeco", model: "unknown", status: "down", port: 2236, born: "2026-03-28", days: 30 },
+  { customer: "Muñeco", agent: "Muñeco", model: "unknown", status: "down", port: 2236, born: "2026-03-28", days: 30, payAmount: "$9,900.00 MXN", payDate: "2026-05-28" },
   { customer: "Ted", agent: "Ted", model: "old proxy", status: "down", port: 2238, phone: "+52 444 287 4841", born: "2026-03-31", days: 27 },
-  { customer: "Thor", agent: "Thor", model: "Gemini 3.1/OldProxy", status: "ok", port: 2224, phone: "+52 444 431 0958", sim: "31707", born: "2026-03-31", days: 27 },
-  { customer: "Argos", agent: "Argos", model: "Gemini 3.1/oldProxy", status: "down", port: 2239, phone: "+52 444 665 5769", sim: "5004610", born: "2026-03-31", days: 27, notes: "+ 3 duplicate Argos docs created 2026-04-01 (re-onboards)" },
-  { customer: "Palomino", agent: "Palomino", model: "Cortex", status: "down", port: 2240, phone: "+52 444 496 9014", sim: "640670", born: "2026-04-05", days: 22, notes: "DOWN. Plus 2 earlier 'Palomo' docs from 2026-04-02" },
-  { customer: "Victor", agent: "Victor", model: "unknown", status: "ok", port: 2242, born: "2026-04-22", days: 5, notes: "youngest" },
-  { customer: "Henry", agent: "Henry", model: "unknown", status: "down", port: 2245, sim: "OXXO8009F" },
+  { customer: "Thor", agent: "Thor", model: "Gemini 3.1/OldProxy", status: "ok", port: 2224, phone: "+52 444 431 0958", sim: "31707", born: "2026-03-31", days: 27, payAmount: "350 USD", payDate: "2026-06-01" },
+  { customer: "Argos", agent: "Argos", model: "Gemini 3.1/oldProxy", status: "down", port: 2239, phone: "+52 444 665 5769", sim: "5004610", born: "2026-03-31", days: 27, payAmount: "350 USD", payDate: "2026-06-01", notes: "+ 3 duplicate Argos docs created 2026-04-01 (re-onboards)" },
+  { customer: "Palomino", agent: "Palomino", model: "Cortex", status: "down", port: 2240, phone: "+52 444 496 9014", sim: "640670", born: "2026-04-05", days: 22, payAmount: "$14,900.00 MXN", payDate: "2026-06-02", notes: "DOWN. Plus 2 earlier 'Palomo' docs from 2026-04-02" },
+  { customer: "Victor", agent: "Victor", model: "unknown", status: "ok", port: 2242, born: "2026-04-22", days: 5, payAmount: "$14,900.00 MXN", payDate: "2026-06-23", notes: "youngest" },
+  { customer: "Henry", agent: "Henry", model: "unknown", status: "down", port: 2245, sim: "OXXO8009F", payAmount: "$14,900.00 MXN", payDate: "2026-06-22" },
   { customer: "LicFausto", agent: "LicFausto", model: "unknown", status: "ok", port: 2244, phone: "+52 444 203 9984", sim: "4136F" },
-  { customer: "Willow", agent: "Willow", model: "unknown", status: "ok", port: 2243 },
-  { customer: "Jesus me entiende", agent: "Jesus me entiende", model: "unknown", status: "ok", port: 2246, phone: "+52 984 186 5182", sim: "3160F" },
-  { customer: "Chaak", agent: "Chaak", model: "unknown", status: "ok", port: 2247, phone: "+52 998 203 0444", sim: "229F" },
+  { customer: "Willow", agent: "Willow", model: "unknown", status: "ok", port: 2243, payAmount: "$19,800.00 MXN", payDate: "2026-06-06" },
+  { customer: "Jesus me entiende", agent: "Jesus me entiende", model: "unknown", status: "ok", port: 2246, phone: "+52 984 186 5182", sim: "3160F", payAmount: "$14,990.00 MXN", payDate: "2026-06-25" },
+  { customer: "Chaak", agent: "Chaak", model: "unknown", status: "ok", port: 2247, phone: "+52 998 203 0444", sim: "229F", payAmount: "$14,900.00 MXN", payDate: "Pendiente" },
 ];
 
 type SortKey = "agent" | "port";
@@ -206,6 +208,12 @@ export default function ClientsPage() {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   SIM
                 </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Fecha de Pago
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Monto de Pago
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -246,6 +254,30 @@ export default function ClientsPage() {
                     {client.sim ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
                         {client.sim}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3.5">
+                    {client.payDate ? (
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          client.payDate === "Pendiente"
+                            ? "bg-slate-100 text-slate-500"
+                            : "bg-rose-100 text-rose-700"
+                        }`}
+                      >
+                        {client.payDate}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3.5">
+                    {client.payAmount ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                        {client.payAmount}
                       </span>
                     ) : (
                       <span className="text-slate-300 text-xs">—</span>
