@@ -110,43 +110,30 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
   const [sortDir, setSortDir] = useState<SortDir>(null);
 
   // "Info Enviada" state — which clients have already been sent payment info.
-  // Loaded from /api/payment-sent (shared across devices/users via Vercel KV).
+  // Saved in the browser's localStorage so it persists across refreshes.
+  const STORAGE_KEY = "payment-info-sent";
   const [sentMap, setSentMap] = useState<Record<string, boolean>>({});
-  // null = still loading; false = storage not provisioned (checkboxes locked).
-  const [storageReady, setStorageReady] = useState<boolean | null>(null);
 
   useEffect(() => {
-    let active = true;
-    fetch("/api/payment-sent")
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((data: { configured: boolean; sent: Record<string, boolean> }) => {
-        if (!active) return;
-        setSentMap(data.sent ?? {});
-        setStorageReady(Boolean(data.configured));
-      })
-      .catch(() => active && setStorageReady(false));
-    return () => {
-      active = false;
-    };
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) setSentMap(JSON.parse(raw));
+    } catch {
+      /* ignore unreadable/corrupt storage */
+    }
   }, []);
 
-  const toggleSent = useCallback(
-    async (agent: string, next: boolean) => {
-      // Optimistic update; revert if the request fails.
-      setSentMap((prev) => ({ ...prev, [agent]: next }));
+  const toggleSent = useCallback((agent: string, next: boolean) => {
+    setSentMap((prev) => {
+      const updated = { ...prev, [agent]: next };
       try {
-        const res = await fetch("/api/payment-sent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ agent, sent: next }),
-        });
-        if (!res.ok) throw new Error(String(res.status));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       } catch {
-        setSentMap((prev) => ({ ...prev, [agent]: !next }));
+        /* ignore quota/availability errors */
       }
-    },
-    [],
-  );
+      return updated;
+    });
+  }, []);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -283,11 +270,6 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
               <th
                 className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                 onClick={() => handleSort("paySent")}
-                title={
-                  storageReady === false
-                    ? "Almacenamiento no configurado — las casillas están bloqueadas"
-                    : undefined
-                }
               >
                 <div className="flex items-center gap-1.5">
                   Info Enviada
@@ -380,10 +362,9 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
                   <input
                     type="checkbox"
                     checked={Boolean(sentMap[client.agent])}
-                    disabled={storageReady !== true}
                     onChange={(e) => toggleSent(client.agent, e.target.checked)}
                     aria-label={`Marcar info de pago enviada para ${client.agent}`}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                 </td>
               </tr>
